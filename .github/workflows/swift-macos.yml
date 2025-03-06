@@ -8,17 +8,17 @@ on:
 
 jobs:
 
-    macOS-swift55:
-        name: macOS (Swift 5.9)
+    macOS-swift6:
+        name: macOS (Swift 6.0)
         timeout-minutes: 30
-        runs-on: macos-14
+        runs-on: macos-15
         steps:
         - name: Checkout
           uses: actions/checkout@v1
         - name: Xcode Version
           run: |
             ls -d /Applications/Xcode*
-            sudo xcode-select -s /Applications/Xcode_15.2.app
+            sudo xcode-select -s /Applications/Xcode_16.2.app
             xcodebuild -version
             swift --version
         - name: Swift Build

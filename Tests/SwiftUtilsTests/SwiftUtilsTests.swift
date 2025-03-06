@@ -40,7 +40,7 @@ extension Pair: BitwiseCopyable where First: BitwiseCopyable, Second: BitwiseCop
         func maybeUninitZeroInitialize() {
             var zero = MaybeUninit<Pair<Duration, Int128>>.zeroInitialize()
 
-            print("Zero value: \(zero.value)")
+            print("Before initialization: \(zero.value)")
 
             typealias Ex<T: BitwiseCopyable, U: BitwiseCopyable, R> = (inout Pair<T, U>) -> R
 
@@ -51,7 +51,7 @@ extension Pair: BitwiseCopyable where First: BitwiseCopyable, Second: BitwiseCop
 
             ex(&zero.value)
 
-            print("Zero value: \(zero.value)")
+            print("After initialization: \(zero.value)")
 
             #expect(zero.first == .seconds(1))
 
