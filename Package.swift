@@ -29,7 +29,6 @@ let package = Package(
                 .enableExperimentalFeature("SuppressedAssociatedTypes"),
                 .enableExperimentalFeature("BuiltinAddressOfRawLayout"),
                 .enableExperimentalFeature("BuiltinStoreRaw"),
-                .enableExperimentalFeature("NoncopyableGenerics2"),
                 .unsafeFlags([
                     "-enable-builtin-module"
                 ]),
