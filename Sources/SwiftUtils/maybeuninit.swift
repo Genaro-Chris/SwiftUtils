@@ -1,6 +1,6 @@
 import Builtin
 
-#if hasAttribute(RawLayout) || hasFeature(RawLayout)
+#if hasAttribute(RawLayout) || hasFeature(RawLayout) && hasFeature(BuiltinAddressOfRawLayout) || hasAttribute(BuiltinAddressOfRawLayout)
 
     /// A wrapper type to construct uninitialized instances of Value type.
     ///

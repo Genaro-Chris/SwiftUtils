@@ -5,6 +5,9 @@ import PackageDescription
 
 let package = Package(
     name: "SwiftUtils",
+    platforms: [
+        .macOS(.v14)
+    ],
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
@@ -19,6 +22,14 @@ let package = Package(
             swiftSettings: [
                 .enableExperimentalFeature("BuiltinModule"),
                 .enableExperimentalFeature("RawLayout"),
+                .enableExperimentalFeature("NoncopyableGenerics"),
+                .enableExperimentalFeature("NoncopyableGenerics2"),
+                .enableExperimentalFeature("BitwiseCopyable"),
+                .enableExperimentalFeature("BitwiseCopyable2"),
+                .enableExperimentalFeature("SuppressedAssociatedTypes"),
+                .enableExperimentalFeature("BuiltinAddressOfRawLayout"),
+                .enableExperimentalFeature("BuiltinStoreRaw"),
+                .enableExperimentalFeature("NoncopyableGenerics2"),
                 .unsafeFlags([
                     "-enable-builtin-module"
                 ]),
