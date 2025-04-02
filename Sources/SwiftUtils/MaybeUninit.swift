@@ -13,7 +13,7 @@ import Builtin
         @_transparent
         @_alwaysEmitIntoClient
         internal var _address: UnsafeMutablePointer<Value> {
-            UnsafeMutablePointer<Value>(_rawAddress)
+            UnsafeMutablePointer<Value>(self._rawAddress)
         }
 
         @_transparent
@@ -27,16 +27,16 @@ import Builtin
         /// Initializes the value of the `MaybeUninit<Value>` instance.
         /// - Returns:
         public func initialize(to initialValue: consuming Value) {
-            _address.initialize(to: initialValue)
+            self._address.initialize(to: initialValue)
         }
 
-        /// Creates a new MaybeUninit<T> in an uninitialized state.
+        /// Creates a new MaybeUninit<Value> in an uninitialized state.
         @_transparent
         @_alwaysEmitIntoClient
         public init() {}
 
         deinit {
-            _ = _address.move()
+            _ = self._address.move()
         }
 
         ///
@@ -44,7 +44,7 @@ import Builtin
         @_transparent
         @_alwaysEmitIntoClient
         public consuming func take() -> Value {
-            let value = _address.move()
+            let value = self._address.move()
             discard self
             return value
         }
@@ -55,43 +55,68 @@ import Builtin
         public var value: Value {
             @_transparent
             unsafeAddress {
-                return UnsafePointer<Value>(_address)
+                return UnsafePointer<Value>(self._address)
             }
             @_transparent
             mutating unsafeMutableAddress {
-                return _address
+                return self._address
             }
         }
 
         /// Initialize the MaybeUninit's instance through an UnsafeMutablePointer
         /// - Parameter body: the closure that initializes the value
         /// - Returns: anything the body parameter returns
-        public func unsafelyInitialize<T>(_ body: (UnsafeMutablePointer<Value>) throws -> T)
+        @_alwaysEmitIntoClient
+        @_transparent
+        public func unsafeInitialize<T>(_ body: (UnsafeMutablePointer<Value>) throws -> T)
             rethrows
             -> T
         {
-            try body(_address)
+            try body(self._address)
         }
     }
 
     extension MaybeUninit where Value: BitwiseCopyable {
-        /// Creates a new MaybeUninit<Value> in an uninitialized state, then fills the memory with value of 0.
+        /// Creates a new MaybeUninit<Value> in an uninitialized state, then fills the memory with value  of 0.
         ///
         /// It depends on Value being zero initilizable which most BitwiseCopyable types are.
-        /// For example, MaybeUninit<any BitwiseCopyable>.zeroInitialize() is fully initialized,
-        /// but MaybeUninit<any ~BitwiseCopyable>.zeroInitialize() is not because it might be a reference or contains a reference.
+        /// ```swift
+        ///     struct ExampleStruct {
+        ///         let x, y: UInt
+        ///     }
+        /// ```
+        /// For example, MaybeUninit<ExampleStruct>.zeroInitialize() is fully initialized,
+        /// but MaybeUninit<any ~BitwiseCopyable>.zeroInitialize() is not because it might be or contains a reference.
+        @_alwaysEmitIntoClient
+        @_transparent
         public static func zeroInitialize() -> Self {
             let result = Self()
-            result.unsafelyInitialize { ptr in
-                UnsafeMutableRawPointer(ptr).assumingMemoryBound(to: UInt8.self).initialize(to: 0)
+            result.unsafeInitialize { ptr in
+                UnsafeMutableRawPointer(ptr).storeBytes(of: 0, as: UInt8.self)
             }
             return result
         }
     }
 
     extension MaybeUninit {
-        subscript<T>(dynamicMember member: KeyPath<Value, T>) -> T {
-            value[keyPath: member]
+        @_alwaysEmitIntoClient
+        public subscript<T>(dynamicMember member: WritableKeyPath<Value, T>) -> T {
+            @_transparent
+            _read {
+                yield self.value[keyPath: member]
+            }
+            @_transparent
+            _modify {
+                yield &self.value[keyPath: member]
+            }
+        }
+
+        @_alwaysEmitIntoClient
+        public subscript<T>(dynamicMember member: KeyPath<Value, T>) -> T {
+            @_transparent
+            _read {
+                yield self.value[keyPath: member]
+            }
         }
     }
 
@@ -110,7 +135,7 @@ import Builtin
         @_transparent
         @_alwaysEmitIntoClient
         internal var _address: UnsafeMutablePointer<Value> {
-            UnsafeMutablePointer<Value>(_rawAddress)
+            UnsafeMutablePointer<Value>(self._rawAddress)
         }
 
         /// Initializes the value of the `MaybeUninit<Value>` instance.
@@ -118,23 +143,24 @@ import Builtin
         @_transparent
         @_alwaysEmitIntoClient
         public func initialize(to initialValue: consuming Value) {
-            Builtin.initialize(initialValue, _rawAddress)
+            Builtin.bindMemory(self._rawAddress, (1)._builtinWordValue, Value.self)
+            Builtin.initialize(initialValue, self._rawAddress)
         }
 
-        /// Creates a new MaybeUninit<T> in an uninitialized state.
+        /// Creates a new MaybeUninit<Value> in an uninitialized state.
         /// This is useful for type
         @_transparent
         @_alwaysEmitIntoClient
         public init() {
-            _rawAddress = Builtin.allocRaw(
+            self._rawAddress = Builtin.allocRaw(
                 findByteCount(of: Value.self)._builtinWordValue,
                 findAlignment(of: Value.self)._builtinWordValue)
-            Builtin.bindMemory(_rawAddress, (1)._builtinWordValue, Value.self)
+            Builtin.bindMemory(self._rawAddress, (1)._builtinWordValue, Value.self)
         }
 
         deinit {
-            _ = _address.deinitialize(count: 1)
-            Builtin.deallocRaw(_rawAddress, (-1)._builtinWordValue, (0)._builtinWordValue)
+            _ = self._address.deinitialize(count: 1)
+            Builtin.deallocRaw(self._rawAddress, (-1)._builtinWordValue, (0)._builtinWordValue)
         }
 
         ///
@@ -143,7 +169,7 @@ import Builtin
         @_alwaysEmitIntoClient
         public consuming func take() -> Value {
             let value = _address.move()
-            Builtin.deallocRaw(_rawAddress, (-1)._builtinWordValue, (0)._builtinWordValue)
+            Builtin.deallocRaw(self._rawAddress, (-1)._builtinWordValue, (0)._builtinWordValue)
             discard self
             return value
         }
@@ -152,22 +178,26 @@ import Builtin
         @_transparent
         @_alwaysEmitIntoClient
         public var value: Value {
+            @_transparent
             _read {
-                yield _address.pointee
+                yield self._address.pointee
             }
+            @_transparent
             _modify {
-                yield &_address.pointee
+                yield &self._address.pointee
             }
         }
 
         /// Initialize the MaybeUninit's instance through an UnsafeMutablePointer
         /// - Parameter body: the closure that initializes the value
         /// - Returns: anything the body parameter returns
-        public func unsafelyInitialize<T>(_ body: (UnsafeMutablePointer<Value>) throws -> T)
+        @_alwaysEmitIntoClient
+        @_transparent
+        public func unsafeInitialize<T>(_ body: (UnsafeMutablePointer<Value>) throws -> T)
             rethrows
             -> T
         {
-            try body(_address)
+            try body(self._address)
         }
 
     }
@@ -176,20 +206,43 @@ import Builtin
         /// Creates a new MaybeUninit<Value> in an uninitialized state, then fills the memory with value  of 0.
         ///
         /// It depends on Value being zero initilizable which most BitwiseCopyable types are.
-        /// For example, MaybeUninit<any BitwiseCopyable>.zeroInitialize() is fully initialized,
-        /// but MaybeUninit<any ~BitwiseCopyable>.zeroInitialize() is not because it might be a reference or contains a reference.
+        /// ```swift
+        ///     struct ExampleStruct {
+        ///         let x, y: UInt
+        ///     }
+        /// ```
+        /// For example, MaybeUninit<ExampleStruct>.zeroInitialize() is fully initialized,
+        /// but MaybeUninit<any ~BitwiseCopyable>.zeroInitialize() is not because it might be or contains a reference.
+        @_alwaysEmitIntoClient
+        @_transparent
         public static func zeroInitialize() -> Self {
             let result = Self()
-            result.unsafelyInitialize { ptr in
-                UnsafeMutableRawPointer(ptr).assumingMemoryBound(to: UInt8.self).initialize(to: 0)
+            result.unsafeInitialize { ptr in
+                UnsafeMutableRawPointer(ptr).storeBytes(of: 0, as: UInt8.self)
             }
             return result
         }
     }
 
     extension MaybeUninit {
-        subscript<T>(dynamicMember member: KeyPath<Value, T>) -> T {
-            value[keyPath: member]
+        @_alwaysEmitIntoClient
+        public subscript<T>(dynamicMember member: WritableKeyPath<Value, T>) -> T {
+            @_transparent
+            _read {
+                yield self.value[keyPath: member]
+            }
+            @_transparent
+            _modify {
+                yield &self.value[keyPath: member]
+            }
+        }
+
+        @_alwaysEmitIntoClient
+        public subscript<T>(dynamicMember member: KeyPath<Value, T>) -> T {
+            @_transparent
+            _read {
+                yield self.value[keyPath: member]
+            }
         }
     }
 
