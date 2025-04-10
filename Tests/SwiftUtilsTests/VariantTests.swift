@@ -68,7 +68,7 @@ struct VariantTests {
 
         _ = variantValue.change(to: 99)
 
-        let oldValue: Int = variantValue.change(to: [Float(253.89)])
+        let oldValue: Int = variantValue.changeAndReturning(to: [Float(253.89)])
 
         #expect(oldValue == 99)
 
@@ -79,7 +79,7 @@ struct VariantTests {
 
         #expect(variantValue.get(as: [Float].self) == [557.78])
 
-        let _: [Float] = variantValue.change(to: "Variant")
+        let _: [Float] = variantValue.changeAndReturning(to: "Variant")
 
         _ = variantValue.change(to: ExampleClass())
 

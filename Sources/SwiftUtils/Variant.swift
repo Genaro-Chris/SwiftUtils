@@ -9,26 +9,26 @@ public struct Variant<Value, each Item>: ~Copyable {
     internal let _rawAddress: Builtin.RawPointer
 
     // Current value's metatype index in parameter pack
-    // reason: For picking Int8 over Int is that I assume no one will create
-    // a Variant instance of any value greater than Int8.Max generic types
     @_alwaysEmitIntoClient
-    internal var metatypeIndex: Int8
+    internal var metatypeIndex: Int
 
+    /// Initializes a Variant instance
     ///
-    /// - Parameter value:
+    /// Warning: might fail at runtime if the argument's type is not among one of the variant generic parameter pack types
+    /// - Parameter value: the value to initialize with
     @_transparent
     @_alwaysEmitIntoClient
     public init<T>(with value: consuming T) {
         var byteCount = findByteCount(of: Value.self)
         var alignment = findAlignment(of: Value.self)
 
-        var index: Int8 = -1
+        var index: Int = -1
 
         if T.self == Value.self {
             index = 0
         }
 
-        var counter: Int8 = 1
+        var counter: Int = 1
         for meta in repeat ((each Item).self) {
             if meta == T.self && index == -1 {
                 index = counter
@@ -85,17 +85,21 @@ public struct Variant<Value, each Item>: ~Copyable {
 
     }
 
+    /// If you are not sure, please use `change<T>(to:)`
     ///
+    /// Warning: might fail at runtime if the argument's type or the return type is not among one of the variant generic parameter pack types
     /// - Parameters:
-    ///   - type:
-    ///   - value:
-    /// - Returns:
+    ///   - type: the metatype of the new type
+    ///   - value: the new value to change this variant type to
+    /// - Returns: the old value but casted to the return type specified
     @_transparent
     @_alwaysEmitIntoClient
-    public mutating func change<T, ReturnType>(_ typeOf: T.Type = T.self, to value: consuming T)
+    public mutating func changeAndReturning<T, ReturnType>(
+        _ typeOf: T.Type = T.self, to value: consuming T
+    )
         -> ReturnType
     {
-        var counter: Int8 = 1
+        var counter: Int = 1
         var oldValue: Any!
         let oldIndex = self.metatypeIndex
         var found = false
@@ -181,18 +185,18 @@ public struct Variant<Value, each Item>: ~Copyable {
     }
 
     ///
+    /// Warning: might fail at runtime if the argument's type is not among one of the variant generic parameter pack types
     /// - Parameters:
-    ///   - type:
-    ///   - value:
-    /// - Returns:
+    ///   - value: the new value to change this variant type to
+    /// - Returns: the old value but casted to the return type specified
     @_transparent
     @_alwaysEmitIntoClient
     public mutating func change<T>(_ typeOf: T.Type = T.self, to value: consuming T) -> Any {
 
-        var counter: Int8 = 1
+        var counter: Int = 1
         var oldValue: Any! = nil
         var found = false
-        let oldIndex: Int8 = self.metatypeIndex
+        let oldIndex: Int = self.metatypeIndex
 
         switch oldIndex {
 
@@ -257,8 +261,8 @@ public struct Variant<Value, each Item>: ~Copyable {
 
     ///
     /// - Parameters:
-    ///   - body:
-    ///   - closures:
+    ///   - body: a closure to call if this instance value is of type `Value`
+    ///   - closures: one of the closures to call if this instance value is not of type `Value`
     @_transparent
     @_alwaysEmitIntoClient
     public func visit(
@@ -286,10 +290,11 @@ public struct Variant<Value, each Item>: ~Copyable {
     }
 
     ///
+    ///
     /// - Parameters:
-    ///   - body:
-    ///   - closures:
-    /// - Throws:
+    ///   - body: a closure to call if this instance value is of type `Value`
+    ///   - closures: one of the closures to call if this instance value is not of type `Value`
+    /// - Throws: any error any of the closure throws
     @_transparent
     @_alwaysEmitIntoClient
     public func visitThrows(
@@ -318,10 +323,15 @@ public struct Variant<Value, each Item>: ~Copyable {
     }
 
     ///
+    /// If you are not sure, please use `interactAsAny(_:)`
+    /// 
+    /// Warning: might fail at runtime if the suggested type is not correct type
+    ///
     /// - Parameters:
-    ///   - typeOf:
-    ///   - body:
-    /// - Returns:
+    ///   - typeOf: the suggest type this variant value is of
+    ///   - body: closure to call
+    /// - Returns: anything the closure returns
+    /// - Throws: if the closure throws any error
     @_transparent
     @_alwaysEmitIntoClient
     public func interact<Input, ReturnType>(
@@ -352,8 +362,9 @@ public struct Variant<Value, each Item>: ~Copyable {
     }
 
     ///
-    /// - Parameter body:
-    /// - Returns:
+    ///   - body: closure to call
+    /// - Returns: anything the closure returns
+    /// - Throws: if the closure throws any error
     @_transparent
     @_alwaysEmitIntoClient
     public func interactAsAny<ReturnType>(_ body: (inout Any) throws -> ReturnType) rethrows
@@ -374,9 +385,11 @@ extension Variant {
 }
 
 extension Variant where Value: Copyable, repeat each Item: Copyable {
-    ///
-    /// - Parameter typeOf:
-    /// - Returns:
+    /// 
+    /// Warning: might fail at runtime if the suggested type is not correct type
+    /// 
+    /// - Parameter typeOf: the metatype of this instance value's type
+    /// - Returns: this instance value
     @_transparent
     @_alwaysEmitIntoClient
     public func get<T>(as typeOf: T.Type) -> T {
@@ -384,7 +397,7 @@ extension Variant where Value: Copyable, repeat each Item: Copyable {
         if typeOf == Value.self {
             return self.getPointer(of: typeOf).pointee
         } else {
-            var counter: Int8 = 1
+            var counter: Int = 1
             for meta in repeat (each Item).self {
                 defer {
                     counter += 1

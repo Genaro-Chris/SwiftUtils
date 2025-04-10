@@ -18,9 +18,9 @@ struct TupleTests {
     }
 
     @Test func indexTuple() {
-        let tuple = Tuple(by: 1, 0.4, Float(73), "Hello", SomeError.unknown)
-        let value: Float = tuple.2
-        #expect(value == Float(73))
+        var tuple = Tuple(by: 1, 0.4, Float(73), "Hello", SomeError.unknown)
+        tuple.2 = Float(2933.74)
+        #expect(tuple.2 == Float(2933.74))
     }
 
     @Test func tuplePattern() {
@@ -42,5 +42,13 @@ struct TupleTests {
             by: 1, 0.4, Float(73), "Hello", false)
 
         #expect(tuple != Tuple(by: 193, 856.4, Float(590), "World", true))
+    }
+
+    @Test func tupleWithAnyObject() {
+        let tuple = Tuple(by: 1, 0.4, ExampleClass(), "Hello", SomeError.unknown)
+        tuple.2.name = "Programmer"
+        tuple.2.age = 24
+        #expect(tuple.2.age == 24)
+        #expect(tuple.2.name == "Programmer")
     }
 }

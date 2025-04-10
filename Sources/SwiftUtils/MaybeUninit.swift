@@ -1,10 +1,10 @@
 import Builtin
 
-#if hasAttribute(RawLayout) || hasFeature(RawLayout) && hasFeature(BuiltinAddressOfRawLayout) || hasAttribute(BuiltinAddressOfRawLayout)
+#if hasFeature(RawLayout) && hasFeature(BuiltinAddressOfRawLayout)
 
     /// A wrapper type to construct uninitialized instances of Value type.
     ///
-    /// This is much similar to Rust's MaybeUnint
+    /// This is much similar to Rust's MaybeUninit
     @_rawLayout(like: Value, movesAsLike)
     @frozen
     @dynamicMemberLookup
@@ -22,15 +22,15 @@ import Builtin
             Builtin.addressOfRawLayout(self)
         }
 
+        /// Fully initialize the value of the MaybeUninit<Value> instance.
         @_transparent
         @_alwaysEmitIntoClient
-        /// Initializes the value of the `MaybeUninit<Value>` instance.
-        /// - Returns:
         public func initialize(to initialValue: consuming Value) {
             self._address.initialize(to: initialValue)
         }
 
-        /// Creates a new MaybeUninit<Value> in an uninitialized state.
+        /// Creates an uninitialized MaybeUninit<Value> instance.
+        /// This is useful for type
         @_transparent
         @_alwaysEmitIntoClient
         public init() {}
@@ -39,8 +39,10 @@ import Builtin
             _ = self._address.move()
         }
 
-        ///
-        /// - Returns:
+        /// Consume the MaybeUninit<Value> instance and return any value the instance had
+        /// 
+        /// Warning: might cause UB (undefined behaviour) if the instance was not fully initialized
+        /// - Returns: 
         @_transparent
         @_alwaysEmitIntoClient
         public consuming func take() -> Value {
@@ -49,7 +51,9 @@ import Builtin
             return value
         }
 
-        ///
+        /// The value 
+        /// 
+        /// Warning: might cause UB (undefined behaviour) if the instance was not fully initialized
         @_transparent
         @_alwaysEmitIntoClient
         public var value: Value {
@@ -63,9 +67,10 @@ import Builtin
             }
         }
 
-        /// Initialize the MaybeUninit's instance through an UnsafeMutablePointer
+        /// Fully initialize the MaybeUninit's instance through an UnsafeMutablePointer
         /// - Parameter body: the closure that initializes the value
         /// - Returns: anything the body parameter returns
+        /// - Throws: if the closure throws any error
         @_alwaysEmitIntoClient
         @_transparent
         public func unsafeInitialize<T>(_ body: (UnsafeMutablePointer<Value>) throws -> T)
@@ -77,7 +82,7 @@ import Builtin
     }
 
     extension MaybeUninit where Value: BitwiseCopyable {
-        /// Creates a new MaybeUninit<Value> in an uninitialized state, then fills the memory with value  of 0.
+        /// Creates a new MaybeUninit<Value> in an uninitialized state, then fills the memory with value of 0.
         ///
         /// It depends on Value being zero initilizable which most BitwiseCopyable types are.
         /// ```swift
@@ -138,8 +143,7 @@ import Builtin
             UnsafeMutablePointer<Value>(self._rawAddress)
         }
 
-        /// Initializes the value of the `MaybeUninit<Value>` instance.
-        /// - Returns:
+        /// Fully initialize the value of the MaybeUninit<Value> instance.
         @_transparent
         @_alwaysEmitIntoClient
         public func initialize(to initialValue: consuming Value) {
@@ -147,7 +151,7 @@ import Builtin
             Builtin.initialize(initialValue, self._rawAddress)
         }
 
-        /// Creates a new MaybeUninit<Value> in an uninitialized state.
+        /// Creates an uninitialized MaybeUninit<Value> instance.
         /// This is useful for type
         @_transparent
         @_alwaysEmitIntoClient
@@ -163,8 +167,10 @@ import Builtin
             Builtin.deallocRaw(self._rawAddress, (-1)._builtinWordValue, (0)._builtinWordValue)
         }
 
-        ///
-        /// - Returns:
+        /// Consume the MaybeUninit<Value> instance and return any value the instance had
+        /// 
+        /// Warning: might cause UB (undefined behaviour) if the instance was not fully initialized
+        /// - Returns: 
         @_transparent
         @_alwaysEmitIntoClient
         public consuming func take() -> Value {
@@ -174,7 +180,9 @@ import Builtin
             return value
         }
 
-        ///
+        /// The value 
+        /// 
+        /// Warning: might cause UB (undefined behaviour) if the instance was not fully initialized
         @_transparent
         @_alwaysEmitIntoClient
         public var value: Value {
@@ -188,9 +196,10 @@ import Builtin
             }
         }
 
-        /// Initialize the MaybeUninit's instance through an UnsafeMutablePointer
+        /// Fully initialize the MaybeUninit's instance through an UnsafeMutablePointer
         /// - Parameter body: the closure that initializes the value
         /// - Returns: anything the body parameter returns
+        /// - Throws: if the closure throws any error
         @_alwaysEmitIntoClient
         @_transparent
         public func unsafeInitialize<T>(_ body: (UnsafeMutablePointer<Value>) throws -> T)
@@ -203,7 +212,7 @@ import Builtin
     }
 
     extension MaybeUninit where Value: BitwiseCopyable {
-        /// Creates a new MaybeUninit<Value> in an uninitialized state, then fills the memory with value  of 0.
+        /// Creates a new MaybeUninit<Value> in an uninitialized state, then fills the memory with value of 0.
         ///
         /// It depends on Value being zero initilizable which most BitwiseCopyable types are.
         /// ```swift
