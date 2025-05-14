@@ -28,3 +28,7 @@ struct Pair<First: ~Copyable, Second: ~Copyable>: ~Copyable {
 extension Pair: Copyable where First: Copyable, Second: Copyable {}
 
 extension Pair: BitwiseCopyable where First: BitwiseCopyable, Second: BitwiseCopyable {}
+
+func exampleFunction(name: String, age: Int) -> String {
+    "\(name) is \(age) years old"
+}

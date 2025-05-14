@@ -1,259 +1,133 @@
 import Builtin
 
-// Because of some limitations a generic parameter pack cannot be noncopyable therefore
-// Variant can't contain noncopyable type
+// Because of some limitations a generic parameter pack cannot have noncopyable type therefore
+// Variant can't contain noncopyable types
+
+/// This is a construct that can store a value of different types more like a type safe union.
+///
+/// This is done for searching from the list of types the one with the largest size and then using it to allocate memory for storing
+/// value of any type from the list of types
 @frozen
-public struct Variant<Value, each Item>: ~Copyable {
+public struct Variant<each Item>: ~Copyable {
 
     @_alwaysEmitIntoClient
-    internal let _rawAddress: Builtin.RawPointer
+    internal let rawPointer: Builtin.RawPointer
 
     // Current value's metatype index in parameter pack
     @_alwaysEmitIntoClient
     internal var metatypeIndex: Int
 
-    /// Initializes a Variant instance
+    /// Initializes a Variant instance with the argument value passed in
     ///
-    /// Warning: might fail at runtime if the argument's type is not among one of the variant generic parameter pack types
     /// - Parameter value: the value to initialize with
+    /// - Throws: if the argument's type is not among one of the variant generic parameter pack types
     @_transparent
     @_alwaysEmitIntoClient
-    public init<T>(with value: consuming T) {
-        var byteCount = findByteCount(of: Value.self)
-        var alignment = findAlignment(of: Value.self)
+    public init<T>(with value: consuming T) throws {
+
+        guard getTupleCount(repeat (each Item).self) > 1 else {
+            throw VariantError.invalidNumberOfTypes
+        }
+
+        var byteCount: Int = 0
+        var alignment: Int = 0
 
         var index: Int = -1
 
-        if T.self == Value.self {
-            index = 0
-        }
-
-        var counter: Int = 1
+        var counter: Int = 0
         for meta in repeat ((each Item).self) {
-            if meta == T.self && index == -1 {
-                index = counter
-            }
-
-            defer {
-                counter += 1
-            }
 
             // Ensure that only the type with largest bytecount is used to allocate the pointer
             byteCount = max(byteCount, findByteCount(of: meta))
             // Ensure that only the type with largest alignment is used to allocate the pointer
             alignment = max(alignment, findAlignment(of: meta))
+
+            if meta == T.self && index == -1 {
+                index = counter
+            } else {
+                counter += 1
+            }
         }
 
         // Ensure that the argument's type is among the variant generic type parameter
-        precondition(
-            index != -1,
-            "Argument value's type isn't among one of the variant generic parameter pack types")
+        guard index != -1 else {
+            throw VariantError.wrongTypeSupplied
+        }
 
         self.metatypeIndex = index
-        self._rawAddress = Builtin.allocRaw(
+        self.rawPointer = Builtin.allocRaw(
             byteCount._builtinWordValue, alignment._builtinWordValue)
 
-        Builtin.initialize(consume value, _rawAddress)
+        assignIntoRaw(consume value, pointer: rawPointer)
 
     }
 
     deinit {
 
-        switch metatypeIndex {
-
-        case 0:
-            // This ensures that we deinitialize the pointer with the correct type
-            self.getPointer(of: Value.self).deinitialize(count: 1)
-            Builtin.deallocRaw(self._rawAddress, (-1)._builtinWordValue, (0)._builtinWordValue)
-
-        default:
-            var counter = 1
-            for meta in repeat ((each Item).self) {
-                defer {
-                    counter += 1
-                }
-
-                if counter == metatypeIndex {
-                    // This ensures that we deinitialize the pointer with the correct type
-                    self.getPointer(of: meta).deinitialize(count: 1)
-                    Builtin.deallocRaw(
-                        self._rawAddress, (-1)._builtinWordValue, (0)._builtinWordValue)
-                    return
-                }
+        var counter: Int = 0
+        for meta in repeat ((each Item).self) {
+            if counter == self.metatypeIndex {
+                // This ensures that the pointer is deinitialized and deallocated with the correct type
+                _ = deallocRaw(of: meta, pointer: self.rawPointer)
+                return
             }
+
+            counter += 1
         }
 
     }
 
     /// If you are not sure, please use `change<T>(to:)`
     ///
-    /// Warning: might fail at runtime if the argument's type or the return type is not among one of the variant generic parameter pack types
     /// - Parameters:
     ///   - type: the metatype of the new type
     ///   - value: the new value to change this variant type to
     /// - Returns: the old value but casted to the return type specified
+    /// - Throws: if the argument's type or the return type is not among one of the variant generic parameter pack types
     @_transparent
     @_alwaysEmitIntoClient
-    public mutating func changeAndReturning<T, ReturnType>(
-        _ typeOf: T.Type = T.self, to value: consuming T
-    )
-        -> ReturnType
+    public mutating func changeAndReturning<T, Result>(
+        _ type: T.Type = T.self, to value: consuming T
+    ) throws
+        -> Result
     {
-        var counter: Int = 1
-        var oldValue: Any!
-        let oldIndex = self.metatypeIndex
-        var found = false
-        var returnTypeFound = false
+        var counter: Int = 0
+        var oldValue: Result?
+        let oldIndex: Int = self.metatypeIndex
+        var found: Bool = false
+        var returnTypeFound: Bool = false
 
-        switch oldIndex {
+        for meta in repeat ((each Item).self) {
+            if counter == oldIndex && meta == Result.self {
+                // Deinitialize the raw pointer and return the value it had
+                oldValue = takeFromRaw(of: meta, pointer: self.rawPointer) as? Result
+            }
 
-        case 0:
-            oldValue = takeFromRaw(of: Value.self, self._rawAddress)
-
-            if Value.self == ReturnType.self {
+            if meta == Result.self && !returnTypeFound {
                 returnTypeFound.toggle()
             }
 
-            if typeOf == Value.self {
-                self.metatypeIndex = 0
+            if type == meta && !found {
                 found.toggle()
-            } else {
-                for meta in repeat ((each Item).self) {
-                    defer { counter += 1 }
-
-                    if meta == ReturnType.self && !returnTypeFound {
-                        returnTypeFound.toggle()
-                    }
-
-                    if meta == typeOf && !found {
-                        self.metatypeIndex = counter
-                        found.toggle()
-                    }
-                }
-
+                self.metatypeIndex = counter
             }
 
-        default:
-
-            if Value.self == ReturnType.self {
-                returnTypeFound.toggle()
-            }
-
-            if Value.self == typeOf {
-                self.metatypeIndex = 0
-                found.toggle()
-            }
-
-            for meta in repeat ((each Item).self) {
-                defer {
-                    counter += 1
-                }
-
-                if counter == oldIndex {
-                    oldValue = takeFromRaw(of: meta, self._rawAddress)
-                }
-
-                if meta == ReturnType.self && !returnTypeFound {
-                    returnTypeFound.toggle()
-                }
-
-                if typeOf == meta && !found {
-                    found.toggle()
-                    self.metatypeIndex = counter
-                }
-
-            }
-
+            counter += 1
         }
 
         guard found else {
-            preconditionFailure(
-                "Argument value's type isn't among the variant generic parameter pack types"
-            )
+            // Reinitialize the raw pointer before throwing this error to avoid UB (Undefined Behaviour)
+            storeIntoRaw(oldValue!, pointer: self.rawPointer)
+            throw VariantError.argumentTypeNotFound
         }
 
         guard returnTypeFound else {
-            preconditionFailure(
-                "Return type supplied isn't among the variant generic parameter pack types"
-            )
+            // Reinitialize the raw pointer before throwing this error to avoid UB (Undefined Behaviour)
+            storeIntoRaw(oldValue!, pointer: self.rawPointer)
+            throw VariantError.returnTypeNotFound
         }
 
-        storeIntoRaw(consume value, self._rawAddress)
-
-        return oldValue as! ReturnType
-
-    }
-
-    ///
-    /// Warning: might fail at runtime if the argument's type is not among one of the variant generic parameter pack types
-    /// - Parameters:
-    ///   - value: the new value to change this variant type to
-    /// - Returns: the old value but casted to the return type specified
-    @_transparent
-    @_alwaysEmitIntoClient
-    public mutating func change<T>(_ typeOf: T.Type = T.self, to value: consuming T) -> Any {
-
-        var counter: Int = 1
-        var oldValue: Any! = nil
-        var found = false
-        let oldIndex: Int = self.metatypeIndex
-
-        switch oldIndex {
-
-        case 0:
-            oldValue = takeFromRaw(of: Value.self, self._rawAddress)
-
-            if typeOf == Value.self {
-                self.metatypeIndex = 0
-                found.toggle()
-            } else {
-                for meta in repeat ((each Item).self) {
-                    defer {
-                        counter += 1
-                    }
-
-                    if meta == typeOf {
-                        self.metatypeIndex = counter
-                        found.toggle()
-                        break
-                    }
-                }
-
-            }
-
-        default:
-
-            if Value.self == typeOf {
-                self.metatypeIndex = 0
-                found.toggle()
-            }
-
-            for meta in repeat ((each Item).self) {
-
-                defer {
-                    counter += 1
-                }
-
-                if counter == oldIndex {
-                    oldValue = takeFromRaw(of: meta, self._rawAddress)
-
-                }
-
-                if typeOf == meta && !found {
-                    found.toggle()
-                    self.metatypeIndex = counter
-                }
-            }
-
-        }
-
-        guard found else {
-            preconditionFailure(
-                "Argument value's type isn't among the variant generic parameter pack types"
-            )
-        }
-
-        storeIntoRaw(consume value, self._rawAddress)
+        storeIntoRaw(consume value, pointer: self.rawPointer)
 
         return oldValue!
 
@@ -261,103 +135,159 @@ public struct Variant<Value, each Item>: ~Copyable {
 
     ///
     /// - Parameters:
-    ///   - body: a closure to call if this instance value is of type `Value`
-    ///   - closures: one of the closures to call if this instance value is not of type `Value`
+    ///   - value: the new value to change this variant type to
+    /// - Returns: the old value but casted to the return type specified
+    /// - Throws: if the argument's type is not among one of the variant generic parameter pack types
     @_transparent
     @_alwaysEmitIntoClient
-    public func visit(
-        _ body: (borrowing Value) -> Void, _ closures: repeat (borrowing each Item) -> Void
-    ) {
+    public mutating func change<T>(_ type: T.Type = T.self, to value: consuming T) throws -> Any {
 
-        switch self.metatypeIndex {
+        var counter: Int = 0
+        var oldValue: Any? = nil
+        var found: Bool = false
+        let oldIndex: Int = self.metatypeIndex
 
-        case 0:
-            body(self.getPointer(of: Value.self).pointee)
+        for meta in repeat ((each Item).self) {
+            if counter == oldIndex {
+                // Deinitialize the raw pointer and return the value it had
+                oldValue = takeFromRaw(of: meta, pointer: self.rawPointer)
+            }
 
-        default:
-            var counter = 1
-            for (funcBody, meta) in repeat (each closures, (each Item).self) {
-                defer {
-                    counter += 1
-                }
+            if type == meta && !found {
+                found.toggle()
+                self.metatypeIndex = counter
+            }
 
-                if counter == self.metatypeIndex {
-                    funcBody(self.getPointer(of: meta).pointee)
-                }
+            counter += 1
+        }
+
+        guard found else {
+            // Reinitialize the raw pointer before throwing this error to avoid UB (Undefined Behaviour)
+            storeIntoRaw(oldValue!, pointer: self.rawPointer)
+            throw VariantError.argumentTypeNotFound
+        }
+
+        storeIntoRaw(consume value, pointer: self.rawPointer)
+
+        return oldValue!
+
+    }
+
+    ///
+    /// - Parameters:
+    ///   - closures: list of the closures to call with the correct type this variant contains
+    @_transparent
+    @_alwaysEmitIntoClient
+    public mutating func visit<Result>(
+        _ closures: repeat (inout each Item) -> Result
+    ) -> Result {
+
+        var counter = 0
+        for (funcBody, meta) in repeat (each closures, (each Item).self) {
+            if counter == self.metatypeIndex {
+                return funcBody(&self.getPointer(of: meta).pointee)
+            } else {
+                counter += 1
             }
         }
 
+        fatalError("Unreachable")
     }
 
     ///
     ///
     /// - Parameters:
-    ///   - body: a closure to call if this instance value is of type `Value`
-    ///   - closures: one of the closures to call if this instance value is not of type `Value`
+    ///   - closures: list of the closures to call with the correct type this variant contains
     /// - Throws: any error any of the closure throws
     @_transparent
     @_alwaysEmitIntoClient
-    public func visitThrows(
-        _ body: (borrowing Value) throws -> Void,
-        _ closures: repeat (borrowing each Item) throws -> Void
-    ) throws {
+    public mutating func visitThrows<Result>(
+        _ closures: repeat (inout each Item) throws -> Result
+    ) throws -> Result {
 
-        switch self.metatypeIndex {
-
-        case 0:
-            try body(self.getPointer(of: Value.self).pointee)
-
-        default:
-            var counter = 1
-            for (funcBody, meta) in repeat (each closures, (each Item).self) {
-                defer {
-                    counter += 1
-                }
-
-                if counter == self.metatypeIndex {
-                    try funcBody(self.getPointer(of: meta).pointee)
-                }
+        var counter = 0
+        for (funcBody, meta) in repeat (each closures, (each Item).self) {
+            if counter == self.metatypeIndex {
+                return try funcBody(&self.getPointer(of: meta).pointee)
+            } else {
+                counter += 1
             }
         }
 
+        fatalError("Unreachable")
+    }
+
+    ///
+    /// - Parameters:
+    ///   - closures: list of the closures to call with the correct type this variant contains
+    @_transparent
+    @_alwaysEmitIntoClient
+    public func visit<Result>(
+        _ closures: repeat (borrowing each Item) -> Result
+    ) -> Result {
+
+        var counter = 0
+        for (funcBody, meta) in repeat (each closures, (each Item).self) {
+            if counter == self.metatypeIndex {
+                return funcBody(self.getPointer(of: meta).pointee)
+            } else {
+                counter += 1
+            }
+        }
+
+        fatalError("Unreachable")
+    }
+
+    ///
+    ///
+    /// - Parameters:
+    ///   - closures: list of the closures to call with the correct type this variant contains
+    /// - Throws: any error any of the closure throws
+    @_transparent
+    @_alwaysEmitIntoClient
+    public func visitThrows<Result>(
+        _ closures: repeat (borrowing each Item) throws -> Result
+    ) throws -> Result {
+
+        var counter = 0
+        for (funcBody, meta) in repeat (each closures, (each Item).self) {
+            if counter == self.metatypeIndex {
+                return try funcBody(self.getPointer(of: meta).pointee)
+            } else {
+                counter += 1
+            }
+        }
+
+        fatalError("Unreachable")
     }
 
     ///
     /// If you are not sure, please use `interactAsAny(_:)`
-    /// 
-    /// Warning: might fail at runtime if the suggested type is not correct type
     ///
     /// - Parameters:
-    ///   - typeOf: the suggest type this variant value is of
+    ///   - type: the suggest type this variant value is of
     ///   - body: closure to call
     /// - Returns: anything the closure returns
-    /// - Throws: if the closure throws any error
+    /// - Throws: if the closure throws any error or if the suggested type is not correct type
     @_transparent
     @_alwaysEmitIntoClient
-    public func interact<Input, ReturnType>(
-        as typeOf: Input.Type, _ body: (inout Input) throws -> ReturnType
-    ) rethrows
-        -> ReturnType
+    public func interact<Input, Result>(
+        as type: Input.Type, _ body: (inout Input) throws -> Result
+    ) throws
+        -> Result
     {
 
-        if typeOf == Value.self {
-            return try body(&self.getPointer(of: typeOf).pointee)
-        } else {
-            var counter = 1
-            for meta in repeat (each Item).self {
-                defer {
-                    counter += 1
-                }
-
-                if counter == self.metatypeIndex && meta == typeOf {
-                    return try body(&self.getPointer(of: typeOf).pointee)
-                }
-            }
-
+        guard
+            let result = try iterateOverMetatypes(
+                of: (repeat (each Item).self), expected: type, index: self.metatypeIndex,
+                { meta in
+                    return try body(&self.getPointer(of: meta).pointee)
+                })
+        else {
+            throw VariantError.wrongTypeSupplied
         }
 
-        preconditionFailure(
-            "Argument value's type isn't among the variant generic parameter pack types")
+        return result
 
     }
 
@@ -367,8 +297,8 @@ public struct Variant<Value, each Item>: ~Copyable {
     /// - Throws: if the closure throws any error
     @_transparent
     @_alwaysEmitIntoClient
-    public func interactAsAny<ReturnType>(_ body: (inout Any) throws -> ReturnType) rethrows
-        -> ReturnType
+    public func interactAsAny<Result>(_ body: (inout Any) throws -> Result) rethrows
+        -> Result
     {
         return try body(&self.getPointer().pointee)
     }
@@ -377,40 +307,50 @@ public struct Variant<Value, each Item>: ~Copyable {
 
 extension Variant {
     @usableFromInline
-    internal func getPointer<T>(of typeOf: T.Type = T.self)
+    internal func getPointer<T>(of type: T.Type = T.self)
         -> UnsafeMutablePointer<T>
     {
-        UnsafeMutablePointer<T>(self._rawAddress)
+        UnsafeMutablePointer<T>(self.rawPointer)
     }
 }
 
-extension Variant where Value: Copyable, repeat each Item: Copyable {
-    /// 
-    /// Warning: might fail at runtime if the suggested type is not correct type
-    /// 
-    /// - Parameter typeOf: the metatype of this instance value's type
+extension Variant where repeat each Item: Copyable {
+
+    /// If you are not sure, please use `getIf(as:)
+    ///
+    /// - Parameter type: the metatype of this instance value's type
+    /// - Returns: this instance value
+    /// - Throws: if the suggested type is not correct type
+    @_transparent
+    @_alwaysEmitIntoClient
+    public func get<T>(as type: T.Type) throws -> T {
+
+        guard
+            let result = iterateOverMetatypes(
+                of: (repeat (each Item).self), expected: type, index: self.metatypeIndex,
+                { meta in
+                    return self.getPointer(of: meta).pointee
+                })
+        else {
+            throw VariantError.wrongTypeSupplied
+        }
+
+        return result
+
+    }
+
+    ///
+    ///
+    /// - Parameter type: the metatype of this instance value's type
     /// - Returns: this instance value
     @_transparent
     @_alwaysEmitIntoClient
-    public func get<T>(as typeOf: T.Type) -> T {
+    public func getIf<T>(as type: T.Type) -> T? {
 
-        if typeOf == Value.self {
-            return self.getPointer(of: typeOf).pointee
-        } else {
-            var counter: Int = 1
-            for meta in repeat (each Item).self {
-                defer {
-                    counter += 1
-                }
-
-                if counter == self.metatypeIndex && meta == typeOf {
-                    return self.getPointer(of: typeOf).pointee
-                }
-            }
-
+        return iterateOverMetatypes(
+            of: (repeat (each Item).self), expected: type, index: self.metatypeIndex
+        ) { meta in
+            return self.getPointer(of: meta).pointee
         }
-
-        preconditionFailure(
-            "Argument value's type isn't among the variant generic parameter pack types")
     }
 }

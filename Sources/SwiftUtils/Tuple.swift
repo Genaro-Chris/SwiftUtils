@@ -1,6 +1,6 @@
-import Builtin
-
 /// Tuple of values
+/// 
+/// This provides a nominal interface to the original Swift tuple construct
 @dynamicMemberLookup
 @frozen
 public struct Tuple<each Value> {
@@ -9,29 +9,23 @@ public struct Tuple<each Value> {
     @_alwaysEmitIntoClient
     internal var tuple: (repeat each Value)
 
-    /// Initializes the Tuple instance with a varidiac list of values
-    /// 
+    /// Initializes the Tuple instance with a variadic arguments list of arbitrary types
+    ///
     /// Warning: fails at runtime if the count of arguments passed in is less than two
-    /// - Parameter value: a varidiac list of values
+    /// - Parameter value: a variadic list of values of arbitrary type
     @_alwaysEmitIntoClient
     @_transparent
     public init(by value: repeat each Value) {
-        precondition(
-            getTupleCount(repeat (each Value).self) > 1,
-            "Cannot instantiate a tuple type with a single value, or an empty tuple")
         tuple = (repeat each value)
     }
 
     /// Initializes the Tuple instance with a tuple of values
-    /// 
+    ///
     /// Warning: fails at runtime if the count of arguments passed in is less than two
     /// - Parameter value: tuple of values
     @_alwaysEmitIntoClient
     @_transparent
     public init(with value: (repeat each Value)) {
-        precondition(
-            getTupleCount(repeat (each Value).self) > 1,
-            "Cannot instantiate a tuple type with a single value, or an empty tuple")
         tuple = value
     }
 
@@ -40,6 +34,28 @@ public struct Tuple<each Value> {
     @_transparent
     public var count: Int {
         getTupleCount(repeat (each Value).self)
+    }
+
+    /// This function is useful in situation where one want to do some destructuring
+    /// - Returns: the tuple value
+    @_alwaysEmitIntoClient
+    @_transparent
+    public func tupleValue() -> (repeat each Value) {
+        return (repeat each self.tuple)
+    }
+
+    /// Check if a certain type is include in this tuple instance
+    /// - Parameter type: the metatype to search
+    /// - Returns: true if type was found otherwise false
+    @_alwaysEmitIntoClient
+    @_transparent
+    public func checkIfType<T>(of type: T.Type) -> Bool {
+        for meta in repeat ((each Value).self) {
+            if meta == type {
+                return true
+            }
+        }
+        return false
     }
 }
 
@@ -80,6 +96,9 @@ extension Tuple: Equatable where repeat each Value: Equatable {
         }
         return true
     }
+}
+
+extension Tuple where Tuple: Equatable {
 
     @_alwaysEmitIntoClient
     @_transparent
@@ -92,4 +111,28 @@ extension Tuple: Equatable where repeat each Value: Equatable {
     public static func ~= (pattern: Self, value: (repeat each Value)) -> Bool {
         return pattern == Tuple(with: (repeat each value))
     }
+}
+
+public func == <each Value: Equatable>(
+    pattern: (repeat each Value), value: Tuple<repeat each Value>
+) -> Bool {
+    return Tuple(with: (repeat each pattern)) == value
+}
+
+public func == <each Value: Equatable>(
+    pattern: Tuple<repeat each Value>, value: (repeat each Value)
+) -> Bool {
+    return pattern == Tuple(with: (repeat each value))
+}
+
+public func != <each Value: Equatable>(
+    pattern: (repeat each Value), value: Tuple<repeat each Value>
+) -> Bool {
+    return Tuple(with: (repeat each pattern)) != value
+}
+
+public func != <each Value: Equatable>(
+    pattern: Tuple<repeat each Value>, value: (repeat each Value)
+) -> Bool {
+    return pattern != Tuple(with: (repeat each value))
 }

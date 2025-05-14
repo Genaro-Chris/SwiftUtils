@@ -19,8 +19,10 @@ struct TupleTests {
 
     @Test func indexTuple() {
         var tuple = Tuple(by: 1, 0.4, Float(73), "Hello", SomeError.unknown)
-        tuple.2 = Float(2933.74)
-        #expect(tuple.2 == Float(2933.74))
+        tuple.0 = 100
+        let value: Float = tuple.2
+        print(tuple)
+        #expect(value == Float(73))
     }
 
     @Test func tuplePattern() {
@@ -44,11 +46,34 @@ struct TupleTests {
         #expect(tuple != Tuple(by: 193, 856.4, Float(590), "World", true))
     }
 
+    @Test func tupleEquatablewithSwiftTuple() {
+        let tuple: Tuple<Int, Double, Float, String, Bool> = Tuple(
+            by: 1, 0.4, Float(73), "Hello", false)
+
+        #expect(tuple != (193, 856.4, Float(590), "World", true))
+    }
+
     @Test func tupleWithAnyObject() {
         let tuple = Tuple(by: 1, 0.4, ExampleClass(), "Hello", SomeError.unknown)
         tuple.2.name = "Programmer"
         tuple.2.age = 24
         #expect(tuple.2.age == 24)
         #expect(tuple.2.name == "Programmer")
+    }
+
+    @Test func tupleDestructure() {
+        let tuple: (Int, Double, ExampleClass, String, SomeError) = (
+            1, 0.4, ExampleClass(), "Hello", SomeError.unknown
+        )
+        let (_, _, _, msg, _) = tuple
+        #expect(msg == "Hello")
+        let tupleInstance = Tuple(with: tuple)
+        let (intValue, _, _, _, _) = tupleInstance.tupleValue()
+        #expect(intValue == 1)
+    }
+
+    @Test func tupleWithNoType() {
+        let tuple = Tuple< >(with: ())
+        #expect(type(of: tuple) == Tuple< >.self)
     }
 }
