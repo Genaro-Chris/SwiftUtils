@@ -2,7 +2,7 @@
 
 # Overview
 
-Utilities is a Swift library designed to provide more features that I feel that the language lacks. It allows developers to features that are readily available in other languages for example the Variant type this package provides could be likened to the std::variant of c++ language.
+Utilities is a Swift library designed to provide more features that I feel that the language currently lacks. It allows developers to use features that are readily available in other languages, for example the Variant type this package provides could be likened to the std::variant of c++ language.
 
 
 # Features
@@ -76,14 +76,14 @@ let cppResult = uninit.value.cpp_method(123)
 
 // This method of zeroInitalized is similar to c initialization technique
 // ctype_t val = ctype_t{0};
-var anotherUninit = MaybeUninit<ctype_t>.zeroInitialize() // ctype_t is simple type that can zero initiailized
+var anotherUninit = MaybeUninit<ctype_t>.zeroInitialize() // ctype_t is simple type that can be zero initiailized
 
-let cResult = ctype_method(&anotherUninit, 93)
+let cResult = ctype_method(&anotherUninit.value, 93)
 ```
 
 ## Contributing
 
-I highly welcome and encourage all sorts of contributions from all swift developers. Feel free to star the repository
+I highly welcome and encourage all sorts of contributions from all swift developers. Feel free to also star the repository if you like the project
 
 If you like this project you can contribute it by:
 

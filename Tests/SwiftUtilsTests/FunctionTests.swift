@@ -58,12 +58,12 @@ struct FunctionTests {
 
     @Test
     func throwingClosureWithMultipleArgs() throws {
-        let closure = ThrowingFunction { (_: Any, _: Any) throws(SomeError) in
+        let closure = ThrowingFunction { (_: String, _: Int) throws(SomeError) in
             throw SomeError.unknown
         }
 
         #expect(throws: SomeError.self) {
-            try closure("", 9)
+            try closure(("", 9))
         }
     }
 

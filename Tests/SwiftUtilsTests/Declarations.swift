@@ -2,6 +2,11 @@ enum SomeError: Swift.Error {
     case unknown
 }
 
+enum NoncopyableEnum {
+
+    case a, b, c
+}
+
 struct ExampleStruct: Equatable {
 
     var int: Int

@@ -33,7 +33,26 @@ struct MaybeUninitTests {
         #expect(maybe.string == "Hello")
 
         #expect(
-            maybe.take() == ExampleStruct(int: 23, string: "Hello", arrayOfFloats: [0.1, 0.4, 0.7, 0.8]))
+            maybe.take()
+                == ExampleStruct(int: 23, string: "Hello", arrayOfFloats: [0.1, 0.4, 0.7, 0.8]))
 
+    }
+
+    @Test func maybeUninitNoncopyable() {
+        var maybe = MaybeUninit<NoncopyableEnum>()
+
+        maybe.initialize(to: .c)
+
+        switch maybe.value {
+
+        case .c: ()
+
+        default: Issue.record("It should be the .c case")
+
+        }
+
+        maybe.value = .b
+
+        #expect(maybe.value == .b)
     }
 }

@@ -5,6 +5,7 @@ import Builtin
     /// A construct that creates uninitialized instances of type Value.
     ///
     /// This is much similar to Rust's MaybeUninit
+    /// This version was gotten from swift forums [here](https://forums.swift.org/t/accepted-with-modifications-se-0453-inlinearray-formerly-vector-a-fixed-size-array/77678/55)
     @_rawLayout(like: Value, movesAsLike)
     @frozen
     @dynamicMemberLookup
@@ -14,14 +15,6 @@ import Builtin
         @_alwaysEmitIntoClient
         internal var rawPointer: Builtin.RawPointer {
             Builtin.addressOfRawLayout(self)
-        }
-
-        /// Fully initialize the value of the MaybeUninit<Value> instance.
-        /// - Parameter to: the value to use in initializing this instance
-        @_transparent
-        @_alwaysEmitIntoClient
-        public func initialize(to initialValue: consuming Value) {
-            self.pointer.initialize(to: initialValue)
         }
 
         /// Creates an uninitialized MaybeUninit<Value> instance.
@@ -57,21 +50,15 @@ import Builtin
     public struct MaybeUninit<Value: ~Copyable>: ~Copyable {
 
         @_alwaysEmitIntoClient
-        internal let rawPointer: Builtin.RawPointer = createRawPointer(Value.self)
-
-        /// Fully initialize the value of the MaybeUninit<Value> instance.
-        /// - Parameter to: the value to use in initializing this instance
-        @_transparent
-        @_alwaysEmitIntoClient
-        public func initialize(to initialValue: consuming Value) {
-            assignIntoRaw(consume initialValue, pointer: self.rawPointer)
-        }
+        internal let rawPointer: Builtin.RawPointer
 
         /// Creates an uninitialized MaybeUninit<Value> instance.
         /// This is useful for types whose value is not ready yet
         @_transparent
         @_alwaysEmitIntoClient
-        public init() {}
+        public init() {
+            self.rawPointer = createRawPointer(Value.self)
+        }
 
         deinit {
             _ = deallocRaw(of: Value.self, pointer: self.rawPointer)
@@ -92,15 +79,32 @@ import Builtin
 
 #endif
 
+extension MaybeUninit where Value: ~Copyable {
+    @_transparent
+    @_alwaysEmitIntoClient
+    internal var pointer: UnsafeMutablePointer<Value> {
+        UnsafeMutablePointer<Value>(self.rawPointer)
+    }
+
+    /// Fully initialize the value of the MaybeUninit<Value> instance.
+    /// - Parameter to: the value to use in initializing this instance
+    @_transparent
+    @_alwaysEmitIntoClient
+    public func initialize(to initialValue: consuming Value) {
+        assignIntoRaw(consume initialValue, pointer: self.rawPointer)
+    }
+
+}
+
 extension MaybeUninit where Value: BitwiseCopyable {
     /// Creates a new MaybeUninit<Value> in an uninitialized state, then initialize by
-    ///  filling up the memory with value of 0s.
+    /// filling up the memory with value of 0s.
     ///
-    /// It depends on Value being zero initilizable which most BitwiseCopyable types are.
+    /// It depends on Value being zero initializable which most BitwiseCopyable types are.
     /// ```swift
-    ///     struct ExampleStruct {
-    ///         let x, y: UInt
-    ///     }
+    /// struct ExampleStruct {
+    ///    let x, y: UInt
+    /// }
     /// ```
     /// For example, MaybeUninit<ExampleStruct>.zeroInitialize() is fully initialized,
     /// but MaybeUninit<any ~BitwiseCopyable>.zeroInitialize() is not because it might be or contains a reference.
@@ -119,14 +123,6 @@ extension MaybeUninit where Value: BitwiseCopyable {
 }
 
 extension MaybeUninit where Value: ~Copyable {
-    @_transparent
-    @_alwaysEmitIntoClient
-    internal var pointer: UnsafeMutablePointer<Value> {
-        UnsafeMutablePointer<Value>(self.rawPointer)
-    }
-}
-
-extension MaybeUninit where Value: ~Copyable {
 
     /// The value this instance contains
     ///
@@ -135,12 +131,12 @@ extension MaybeUninit where Value: ~Copyable {
     @_alwaysEmitIntoClient
     public var value: Value {
         @_transparent
-        _read {
-            yield self.pointer.pointee
+        unsafeAddress {
+            UnsafePointer<Value>(self.pointer)
         }
         @_transparent
-        _modify {
-            yield &self.pointer.pointee
+        unsafeMutableAddress {
+            self.pointer
         }
     }
 }

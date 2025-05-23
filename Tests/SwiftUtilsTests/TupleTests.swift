@@ -76,4 +76,24 @@ struct TupleTests {
         let tuple = Tuple< >(with: ())
         #expect(type(of: tuple) == Tuple< >.self)
     }
+
+    @Test func tupleCheckIfTupleHas() {
+        let tuple: Tuple<Int, Double, Float, String, Bool> = Tuple(
+            by: 1, 0.4, Float(73), "Hello", false)
+
+        #expect(tuple.checkForType(Double.self))
+        #expect(!tuple.checkForType(SomeError.self))
+    }
+
+    @Test func tupleSwitch() {
+        let tupleValue: (Int, Double, Float, String, Bool) = (1, 0.4, Float(73), "Hello", false)
+        let tuple: Tuple<Int, Double, Float, String, Bool> = Tuple(with: tupleValue)
+
+        let check: Bool = switch tupleValue {
+            case tuple: true
+            default: false
+        }
+
+        #expect(check)
+    }
 }

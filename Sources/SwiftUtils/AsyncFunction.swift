@@ -17,7 +17,7 @@ public struct AsyncFunction<each Input, Output> {
 
     /// calls the function
     /// - Parameter inputs: variadic arguments list of arbitrary types
-    /// - Returns: whatever the function results
+    /// - Returns: whatever the function returns
     @_transparent
     @_alwaysEmitIntoClient
     public func callAsFunction(_ inputs: repeat each Input) async -> Output {
@@ -26,7 +26,7 @@ public struct AsyncFunction<each Input, Output> {
 
     /// calls the function
     /// - Parameter inputs: tuple of arbitrary values
-    /// - Returns: whatever the function results
+    /// - Returns: whatever the function returns
     @_transparent
     @_alwaysEmitIntoClient
     public func callAsFunction(_ inputs: (repeat each Input)) async -> Output {

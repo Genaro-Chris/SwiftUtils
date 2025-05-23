@@ -26,7 +26,6 @@ let package = Package(
                 .enableExperimentalFeature("NoncopyableGenerics2"),
                 .enableExperimentalFeature("BitwiseCopyable"),
                 .enableExperimentalFeature("BitwiseCopyable2"),
-                .enableExperimentalFeature("SuppressedAssociatedTypes"),
                 .enableExperimentalFeature("BuiltinAddressOfRawLayout"),
                 .enableExperimentalFeature("BuiltinStoreRaw"),
                 .unsafeFlags([

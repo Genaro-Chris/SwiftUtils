@@ -67,10 +67,10 @@ internal func getTupleCount<each Value>(_: repeat (each Value).Type) -> Int {
     Int(Builtin.packLength((repeat each Value).self))
 }
 
-@usableFromInline
 /// Creates a builtin raw pointer bound to a specific type
 /// - Parameter type: the type's metatype
 /// - Returns: a builtin raw pointer
+@usableFromInline
 internal func createRawPointer<T: ~Copyable>(_ type: T.Type = T.self) -> Builtin.RawPointer {
     let rawPointer: Builtin.RawPointer = Builtin.allocRaw(
         findByteCount(of: T.self)._builtinWordValue,
@@ -79,27 +79,30 @@ internal func createRawPointer<T: ~Copyable>(_ type: T.Type = T.self) -> Builtin
     return rawPointer
 }
 
-/// Iterates over generic parameter pack of metatypes and execute a block of code if the expected metattype is found
+/// Creates a builtin raw pointer
+/// - Parameters:
+///   - byteCount: The byteCount
+///   - alignment: The alignment
+/// - Returns: a raw pointer unbound to any type
+@usableFromInline
+internal func createRawPointer(byteCount: Int, alignment: Int) -> Builtin.RawPointer {
+    return Builtin.allocRaw(byteCount._builtinWordValue, alignment._builtinWordValue)
+}
+
+/// Iterates over generic parameter pack of metatypes and ceck if the expected metattype is exists in the pack
 /// - Parameters:
 ///   - types: generic parameter pack of metatypes
-///   - expected: the expected metatype
-///   - index: the correct index
-///   - body: block of code to execute
-/// - Returns: whatever the closure supplied returns
+///   - expected: the expected type metatype
+/// - Returns: true if found else false
 @usableFromInline
-func iterateOverMetatypes<each Type, T, V>(
-    of types: (repeat (each Type).Type), expected _: T.Type, index: Int,
-    _ body: (T.Type) throws -> V
-) rethrows -> V? {
-    var result: V? = nil
-    var counter = 0
+func iterateOverMetatypes<each Type, T>(of types: (repeat (each Type).Type), expected type: T.Type)
+    -> Bool
+{
+
     for meta in repeat (each types) {
-        if T.self == meta && index == counter {
-            result = try body(meta as! T.Type)
-            break
-        } else {
-            counter += 1
+        if type == meta {
+            return true
         }
     }
-    return result
+    return false
 }

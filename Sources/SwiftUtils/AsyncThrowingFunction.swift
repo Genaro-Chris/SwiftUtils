@@ -19,7 +19,7 @@
 
         /// calls the function
         /// - Parameter inputs: variadic arguments list of arbitrary types
-        /// - Returns: whatever the function results
+        /// - Returns: whatever the function returns
         /// - Throws: Any error the function throws
         @_transparent
         @_alwaysEmitIntoClient
@@ -29,7 +29,7 @@
 
         /// calls the function
         /// - Parameter inputs: tuple of arbitrary values
-        /// - Returns: whatever the function results
+        /// - Returns: whatever the function returns
         /// - Throws: Any error the function throws
         @_transparent
         @_alwaysEmitIntoClient
@@ -59,7 +59,7 @@
 
         /// calls the function
         /// - Parameter inputs: variadic arguments list of arbitrary types
-        /// - Returns: whatever the function results
+        /// - Returns: whatever the function returns
         /// - Throws: Any error the function throws
         @_transparent
         @_alwaysEmitIntoClient
@@ -69,7 +69,7 @@
 
         /// calls the function
         /// - Parameter inputs: tuple of arbitrary values
-        /// - Returns: whatever the function results
+        /// - Returns: whatever the function returns
         /// - Throws: Any error the function throws
         @_transparent
         @_alwaysEmitIntoClient
