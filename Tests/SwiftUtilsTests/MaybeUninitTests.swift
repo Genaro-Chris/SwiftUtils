@@ -19,11 +19,7 @@ struct MaybeUninitTests {
     func maybeUninit() {
         var maybe = MaybeUninit<ExampleStruct>()
 
-        if true {
-            maybe.initialize(
-                to: ExampleStruct(
-                    int: 23, string: "String", arrayOfFloats: [0.1, 0.4, 0.7, 0.8]))
-        }
+        maybe.initialize(to: ExampleStruct(int: 23, string: "String", arrayOfFloats: [0.1, 0.4, 0.7, 0.8]))
 
         maybe.value.someMethod()
 
@@ -32,9 +28,7 @@ struct MaybeUninitTests {
         #expect(maybe.int == 23)
         #expect(maybe.string == "Hello")
 
-        #expect(
-            maybe.take()
-                == ExampleStruct(int: 23, string: "Hello", arrayOfFloats: [0.1, 0.4, 0.7, 0.8]))
+        #expect(maybe.take() == ExampleStruct(int: 23, string: "Hello", arrayOfFloats: [0.1, 0.4, 0.7, 0.8]))
 
     }
 
@@ -54,5 +48,20 @@ struct MaybeUninitTests {
         maybe.value = .b
 
         #expect(maybe.value == .b)
+    }
+
+    @Test func maybeUninitUseAfterTake() {
+        var maybe = MaybeUninit<ExampleStruct>()
+
+        maybe.initialize(to: ExampleStruct(int: 6, string: "String", arrayOfFloats: [0.1, 0.4, 0.7, 0.8]))
+
+        #expect(maybe.take() == ExampleStruct(int: 6, string: "String", arrayOfFloats: [0.1, 0.4, 0.7, 0.8]))
+
+        maybe = MaybeUninit()
+
+        maybe.initialize(to: ExampleStruct(int: 23, string: "Hello", arrayOfFloats: [0.1, 0.4, 0.7, 0.8]))
+
+        #expect(maybe.int == 23)
+        #expect(maybe.string == "Hello")
     }
 }

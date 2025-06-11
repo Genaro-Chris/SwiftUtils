@@ -27,16 +27,12 @@ import Builtin
             _ = self.pointer.move()
         }
 
-        /// Consume the MaybeUninit<Value> instance and return any value the instance had
-        ///
-        /// Warning: might cause UB (undefined behaviour) if the instance was not fully initialized
-        /// - Returns: the value this instance had if it had a fully initialized value otherwise garbage value
+        /// Fully initialize the value of the MaybeUninit<Value> instance.
+        /// - Parameter to: the value to use in initializing this instance
         @_transparent
         @_alwaysEmitIntoClient
-        public consuming func take() -> Value {
-            let value: Value = self.pointer.move()
-            discard self
-            return value
+        public func initialize(to initialValue: consuming Value) {
+            assignIntoRaw(consume initialValue, pointer: self.rawPointer)
         }
     }
 
@@ -64,16 +60,12 @@ import Builtin
             _ = deallocRaw(of: Value.self, pointer: self.rawPointer)
         }
 
-        /// Consume the MaybeUninit<Value> instance and return any value the instance had
-        ///
-        /// Warning: might cause UB (undefined behaviour) if the instance was not fully initialized
-        /// - Returns: the value this instance had if it had a fully initialized value otherwise garbage value
+        /// Fully initialize the value of the MaybeUninit<Value> instance.
+        /// - Parameter to: the value to use in initializing this instance
         @_transparent
         @_alwaysEmitIntoClient
-        public consuming func take() -> Value {
-            let value: Value = deallocRaw(of: Value.self, pointer: self.rawPointer)
-            discard self
-            return value
+        public func initialize(to initialValue: consuming Value) {
+            storeIntoRaw(consume initialValue, pointer: self.rawPointer)
         }
     }
 
@@ -86,12 +78,16 @@ extension MaybeUninit where Value: ~Copyable {
         UnsafeMutablePointer<Value>(self.rawPointer)
     }
 
-    /// Fully initialize the value of the MaybeUninit<Value> instance.
-    /// - Parameter to: the value to use in initializing this instance
+    /// Consume the MaybeUninit<Value> instance and return any value the instance had
+    ///
+    /// Warning: might cause UB (undefined behaviour) if the instance was not fully initialized
+    /// - Returns: the value this instance had if it had a fully initialized value otherwise garbage value
     @_transparent
     @_alwaysEmitIntoClient
-    public func initialize(to initialValue: consuming Value) {
-        assignIntoRaw(consume initialValue, pointer: self.rawPointer)
+    public consuming func take() -> Value {
+        let value: Value = self.pointer.move()
+        discard self
+        return value
     }
 
 }
