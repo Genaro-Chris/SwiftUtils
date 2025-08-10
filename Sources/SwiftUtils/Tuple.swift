@@ -1,6 +1,19 @@
 /// Tuple of values
 ///
-/// This provides a nominal interface to the original Swift tuple construct
+/// This provides a nominal interface to the original Swift tuple construct while providing some
+/// compabilities with swift tuples
+///
+/// ```swift
+/// var tuple = Tuple(by: 1, 0.4, Float(73), "Hello", SomeError.unknown)
+/// tuple.0 = 100
+///
+/// // After some time
+/// tuple = Tuple(with: (1, 0.4, Float(73), "Hello", SomeError.unknown))
+///
+/// ```
+///
+/// This provides a way for extending swift tuple instance for instance addition for methods, conforming to protocols
+import Builtin
 @dynamicMemberLookup
 @frozen
 public struct Tuple<each Value> {
@@ -35,9 +48,9 @@ public struct Tuple<each Value> {
     }
 
     /// Returns as a normal swift tuple
-    ///  
-    /// This function is useful in situation where one want to do some destructuring
     /// - Returns: the tuple value
+    ///
+    /// This function is useful in situation where one want to do some destructuring
     @_alwaysEmitIntoClient
     @_transparent
     public func tupleValue() -> (repeat each Value) {
@@ -47,6 +60,15 @@ public struct Tuple<each Value> {
     /// Check if a certain type is included in this tuple instance
     /// - Parameter type: the metatype to search for
     /// - Returns: true if type was found otherwise false
+    ///
+    /// ```swift
+    /// let tuple = Tuple(by: 1, 0.4, Float(73), "Hello", SomeError.unknown)
+    ///
+    /// if tuple.checkForType(Float.self) {
+    ///     // tuple contains a float value in it
+    /// }
+    ///
+    /// ```
     @_alwaysEmitIntoClient
     @_transparent
     public func checkForType<T>(_ type: T.Type) -> Bool {
@@ -99,7 +121,9 @@ extension Tuple where Tuple: Equatable {
     }
 }
 
-public func ~= <each Value: Equatable> (pattern: (repeat each Value), value: Tuple<repeat each Value>) -> Bool {
+public func ~= <each Value: Equatable>(
+    pattern: (repeat each Value), value: Tuple<repeat each Value>
+) -> Bool {
     return Tuple(with: (repeat each pattern)) == value
 }
 

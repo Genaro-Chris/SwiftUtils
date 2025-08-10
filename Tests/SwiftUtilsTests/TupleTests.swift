@@ -89,11 +89,13 @@ struct TupleTests {
         let tupleValue: (Int, Double, Float, String, Bool) = (1, 0.4, Float(73), "Hello", false)
         let tuple: Tuple<Int, Double, Float, String, Bool> = Tuple(with: tupleValue)
 
-        let check: Bool = switch tupleValue {
+        let check: Bool =
+            switch tupleValue {
             case tuple: true
             default: false
-        }
+            }
 
         #expect(check)
     }
+
 }

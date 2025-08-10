@@ -1,8 +1,10 @@
+import Utilities
+
 enum SomeError: Swift.Error {
     case unknown
 }
 
-enum NoncopyableEnum {
+enum NoncopyableEnum: ~Copyable {
 
     case a, b, c
 }
@@ -21,8 +23,13 @@ struct ExampleStruct: Equatable {
 }
 
 class ExampleClass {
-    var name = "Unknown"
-    var age = 18
+    var name: String
+    var age: Int
+
+    init(name: String = "Unknown", age: Int = 18) {
+        self.name = name
+        self.age = age
+    }
 }
 
 struct Pair<First: ~Copyable, Second: ~Copyable>: ~Copyable {

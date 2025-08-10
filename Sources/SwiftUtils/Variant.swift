@@ -430,7 +430,7 @@ extension Variant where repeat each Item: Copyable {
 
     /// Returns the value this instance has if the type is correct one otherwise nil
     /// - Parameter as: the metatype of this instance value's type
-    /// - Returns: this instance value
+    /// - Returns: this instance value otherwise nil
     @_transparent
     @_alwaysEmitIntoClient
     public func getIf<T>(as type: T.Type) -> T? {

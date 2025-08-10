@@ -47,7 +47,10 @@ struct MaybeUninitTests {
 
         maybe.value = .b
 
-        #expect(maybe.value == .b)
+        if case NoncopyableEnum.b = maybe.take() {
+            #expect(Bool(true))
+        }
+        
     }
 
     @Test func maybeUninitUseAfterTake() {
@@ -63,5 +66,19 @@ struct MaybeUninitTests {
 
         #expect(maybe.int == 23)
         #expect(maybe.string == "Hello")
+    }
+
+    @Test
+    func maybeUninitClass() {
+        var maybe = MaybeUninit<ExampleClass>()
+
+        maybe.initialize(to: ExampleClass())
+
+        maybe.name = "Dev"
+        maybe.age = 23
+
+        #expect(maybe.age == 23)
+        #expect(maybe.name == "Dev")
+
     }
 }

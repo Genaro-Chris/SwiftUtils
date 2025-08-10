@@ -1,3 +1,4 @@
+/// Error thrown while using the `Variant` construct
 @frozen
 public enum VariantError: Swift.Error, CustomStringConvertible {
     case argumentTypeNotFound
